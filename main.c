@@ -119,15 +119,48 @@ void insertarMensaje( Imagen * img , unsigned char mensaje[], int n ) {
         //Voy a crear un BYTE tal que:
         //     Cojo el byte actual de la imagen y le hago un 'Y' bit a bit con otro byte(generado a partir de cuantos bits quiero quitar) para eliminar los ultimos n bits (solmente se salvan los primeros)
         //Me interesa salvar los primeros, puesto que son los que no se van a modificar y van a mantener los dígitos binarios más significativos de color
-        unsigned char parteQueMeSirve = img.informacion[i] & mascaraSalvarPrimeros(n)
+        //Los primeros son los bits que van desde el 0 hasta el 8-n [puede hacer un dibujo para ver que está pasando], es decir me importa salvar los primeros (8-n) bits
+        unsigned char parteQueMeSirve = img.informacion[i] & mascaraSalvarPrimeros(8-n);
 
         //Función auxiliar que devuelve un byte tal que:
         //Inserta a los últimos n bits que entran como parámetro en el byte actual (la parte que me sirve)
         //En otras palabras; a la parte que me sirve (que contiene los dígitos mas significativo del color), la agrego los siguientes n bits del mensaje
         //Esta función modifica el mensaje (mas información en la función)
-        esteganografiar(parteQueMeSirve, mensaje, n)
+        int deboLeer = bitsPorLeer % (n+1); // debo coger al menos  esta cantidad de bits en la siguiente 'iteración' (lo que me falta % (n+1) [para que coja por mucho n Bits]
+        //Guardo el byte después de aplicar la esteganografía
+        unsigned char byteRGBModificado = esteganografiar(parteQueMeSirve, mensaje, deboLeer); //Le voy a pasar como parámetro el byte que me sirve, el mensaje y cuantos bits debo leer)
+        //Lo reemplazo en la información de la imagen
+        img.informacion[i] = byteRGBModificado;
+
+        bitsPorLeer -= deboLeer; //Como ya leí 'deboLeer' bits, los resto a los que me faltan por leer 
+        //Lo siguiente es por seguridad, para no quedarme en un ciclo infinito
+        if (bitsPorLeer<0)//Si es menor que cero, es claro que ya acabó pero que se pasó de bits
+        {
+            printf("Me pasé de bits por leer: %i", bitsPorLeer)
+            bitsPorLeer = 0; //Entonces, para detener el for, vuelvo bitsPorLeer = 0
+        }
     }
 }
+
+/**
+* Función de apoyo que dado una parte de un byte a conservar, un mensaje y una cantidad específica de bits, inserta los siguietntes n bits del mensaje
+* en las últimas n posiciones del Byte de entrada. Para poder realizar esto sin tener que ir contabilizando en qué parte voy del mensaje, vamos a correr el mensaje
+* n bits a la izquierda (puesto que como ya los guardé en la imágen, no importa si los pierdo)
+* ---
+* Parámetro parteAConservar byte partido de tal forma que los primeros (8-n) bits contienen información sobre el color de la imágen (y que por tanto NO se deben modificar) Los últimos n bits están en 0 para poder agregarles (sin tanta maña) los siguientes n bits del mensaje
+* Parámetro mensaje mensaje que falta por esteganografiar. Se va a modificar corriendolo n BITS a la izquierda cada vez (la función correr mensaje se encarga de esto) 
+* Parámetro n cantidad de bits del mensaje a ocultar en el byte 0< n <= 8
+*/
+unsigned char esteganografiar(unsigned char parteAConservar, unsigned char mensaje[], int n)
+{
+    //Cojo los primeros n BITS del mensaje aplicando una máscara
+    unsigned char byteAInsertar = mensaje[1] & mascaraSalvarPrimeros(n);
+    //Para poder 'meterlos' al final del byte que me llegó, debo correrlos hasta el final
+    byteAInsertar >> 8-n;
+    byteAInsertar = SparteAConservar | byteAInsertar;
+    return byteAInsertar;
+}
+
 
 /**
 * Extrae un mensaje de tama�o l, guardado de a n bits por componente de color, de la imagen apuntada por img
