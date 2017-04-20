@@ -111,16 +111,16 @@ void insertarMensaje( Imagen * img , unsigned char mensaje[], int n ) {
 	//TODO  Desarrollar completo en C
 
     //Número de BITS que quedan por leer del mensaje. strlen() devuelve la longitud del 'String'
-    //bits = cantdad de caracteres * cuantos bytes tiene cada uno * 8 (cada byte tiene 8 bits)
-    int bitsPorLeer = strlen(mensaje)*(sizeof char)*8;
+    //bits = cantdad de caracteres * cuantos bytes tiene cada uno (1) * 8 (cada byte tiene 8 bits)
+    int bitsPorLeer = lenStr(mensaje)*(sizeof mensaje[1]) * 8;
 
     for(int i = 0; bitsPorLeer; i++)
     {
         //Voy a crear un BYTE tal que:
-        //     Cojo el byte actual de la imagen y le hago un 'Y' bit a bit con otro byte(generado a partir de cuantos bits quiero quitar) para eliminar los ultimos n bits (solmente se salvan los primeros)
-        //Me interesa salvar los primeros, puesto que son los que no se van a modificar y van a mantener los dígitos binarios más significativos de color
-        //Los primeros son los bits que van desde el 0 hasta el 8-n [puede hacer un dibujo para ver que está pasando], es decir me importa salvar los primeros (8-n) bits
-        unsigned char parteQueMeSirve = img.informacion[i] & mascaraSalvarPrimeros(8-n);
+        // Cojo el byte actual de la imagen y le hago un 'Y' bit a bit con otro byte(generado a partir de cuantos bits quiero quitar) para eliminar los ultimos n bits (solmente se salvan los primeros)
+        // Me interesa salvar los primeros, puesto que son los que no se van a modificar y van a mantener los dígitos binarios más significativos de color
+        // Los primeros son los bits que van desde el 0 hasta el 8-n [puede hacer un dibujo para ver que está pasando], es decir me importa salvar los primeros (8-n) bits
+        unsigned char parteQueMeSirve = img[0].informacion[i] & mascaraSalvarPrimeros(8-n);
 
         //Función auxiliar que devuelve un byte tal que:
         //Inserta a los últimos n bits que entran como parámetro en el byte actual (la parte que me sirve)
@@ -130,16 +130,30 @@ void insertarMensaje( Imagen * img , unsigned char mensaje[], int n ) {
         //Guardo el byte después de aplicar la esteganografía
         unsigned char byteRGBModificado = esteganografiar(parteQueMeSirve, mensaje, deboLeer); //Le voy a pasar como parámetro el byte que me sirve, el mensaje y cuantos bits debo leer)
         //Lo reemplazo en la información de la imagen
-        img.informacion[i] = byteRGBModificado;
+        img[0].informacion[i] = byteRGBModificado;
 
         bitsPorLeer -= deboLeer; //Como ya leí 'deboLeer' bits, los resto a los que me faltan por leer 
         //Lo siguiente es por seguridad, para no quedarme en un ciclo infinito
         if (bitsPorLeer<0)//Si es menor que cero, es claro que ya acabó pero que se pasó de bits
         {
-            printf("Me pasé de bits por leer: %i", bitsPorLeer)
+            printf("Me pasé de bits por leer: %i", bitsPorLeer);
             bitsPorLeer = 0; //Entonces, para detener el for, vuelvo bitsPorLeer = 0
         }
     }
+}
+
+/**
+* Función de apoyo para conocer la longitud de una cadena de caracteres String; dado que el método ya implementado de C strlen(char[]) no aplica para un unsigned char[]
+* Vamos a ir por el i'esimo caracter de la cadena, y si no es el nulo vamos a incrementar longitud.
+*/
+int lenStr(unsigned char mensaje[])
+{
+	int longitud = 0;
+	for (int i = 0; mensaje[i]; i++)
+	{
+		longitud++;
+	}
+	return longitud;
 }
 
 /**
@@ -157,10 +171,37 @@ unsigned char esteganografiar(unsigned char parteAConservar, unsigned char mensa
     unsigned char byteAInsertar = mensaje[1] & mascaraSalvarPrimeros(n);
     //Para poder 'meterlos' al final del byte que me llegó, debo correrlos hasta el final
     byteAInsertar >> 8-n;
-    byteAInsertar = SparteAConservar | byteAInsertar;
+    byteAInsertar = parteAConservar | byteAInsertar;
     return byteAInsertar;
 }
 
+unsigned char mascaraSalvarPrimeros(int n)
+{
+	//Quiero hacer una mascara tal que
+	//si n = 3 deba hacer lo siguiente:
+	// entrada = xxxxxxxx
+	//     &
+	// mascara = 11111000
+   //resultado = xxxxx000
+	// 
+	//Miremos que la mascara (en representacion decimal) es = 2^7 + 2^6 + ... + 2^3 + 0 + 0 + 0 == Suma desde i = 7 hasta i = 3 de (2^i)
+	//A partir de esto, miramos para el caso general: quiero 'matar' los últimos k bits, pero me dan los n que quiero 'salvar', es claro que k + n = 8, entonces k = n-8
+	//Debo operar mi entrada con una máscara m, donde su representación decimal es: Suma desde i = 7 hasta i = k de (2^i)
+
+	unsigned char mascara;
+	// k = n-8
+	int bitsMatados = n-8;
+
+	//desde k hasta 7
+	for (int i = bitsMatados; i < 8; i++) 
+	{
+		mascara += pow(2, i);
+	}
+	//breakpoint
+	return mascara;
+	
+
+}
 
 /**
 * Extrae un mensaje de tama�o l, guardado de a n bits por componente de color, de la imagen apuntada por img
