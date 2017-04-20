@@ -1,4 +1,4 @@
-// isis1304-111-proyecto2.cpp: define el punto de entrada de la aplicaci—n de consola.
+// isis1304-111-proyecto2.cpp: define el punto de entrada de la aplicaciï¿½n de consola.
 // Se recuerda a los estudiantes que el proyecto debe ser desarrollado obligatoriamente en grupos de 3.
 //
 // DESARROLLADO POR:
@@ -103,19 +103,37 @@ int main(int argc, char* argv[]) {
 
 /**
 * Inserta un mensaje, de a n bits por componente de color, en la imagen apuntada por img
-* parametro img Apuntador a una imagen en cuyos pixeles se almacenará el mensaje.
+* parametro img Apuntador a una imagen en cuyos pixeles se almacenarï¿½ el mensaje.
 * parametro mensaje Apuntador a una cadena de caracteres con el mensaje.
-* parametro n Cantidad de bits del mensaje que se almacenarán en cada componente de color de cada pixel. 0 < n <= 8.
+* parametro n Cantidad de bits del mensaje que se almacenarï¿½n en cada componente de color de cada pixel. 0 < n <= 8.
 */
 void insertarMensaje( Imagen * img , unsigned char mensaje[], int n ) {
 	//TODO  Desarrollar completo en C
+
+    //NÃºmero de BITS que quedan por leer del mensaje. strlen() devuelve la longitud del 'String'
+    //bits = cantdad de caracteres * cuantos bytes tiene cada uno * 8 (cada byte tiene 8 bits)
+    int bitsPorLeer = strlen(mensaje)*(sizeof char)*8;
+
+    for(int i = 0; bitsPorLeer; i++)
+    {
+        //Voy a crear un BYTE tal que:
+        //     Cojo el byte actual de la imagen y le hago un 'Y' bit a bit con otro byte(generado a partir de cuantos bits quiero quitar) para eliminar los ultimos n bits (solmente se salvan los primeros)
+        //Me interesa salvar los primeros, puesto que son los que no se van a modificar y van a mantener los dÃ­gitos binarios mÃ¡s significativos de color
+        unsigned char parteQueMeSirve = img.informacion[i] & mascaraSalvarPrimeros(n)
+
+        //FunciÃ³n auxiliar que devuelve un byte tal que:
+        //Inserta a los Ãºltimos n bits que entran como parÃ¡metro en el byte actual (la parte que me sirve)
+        //En otras palabras; a la parte que me sirve (que contiene los dÃ­gitos mas significativo del color), la agrego los siguientes n bits del mensaje
+        //Esta funciÃ³n modifica el mensaje (mas informaciÃ³n en la funciÃ³n)
+        esteganografiar(parteQueMeSirve, mensaje, n)
+    }
 }
 
 /**
-* Extrae un mensaje de tama–o l, guardado de a n bits por componente de color, de la imagen apuntada por img
+* Extrae un mensaje de tamaï¿½o l, guardado de a n bits por componente de color, de la imagen apuntada por img
 * parametro img Apuntador a una imagen que tiene almacenado el mensaje en sus pixeles.
-* parametro msg Apuntador a una cadena de caracteres donde se depositará el mensaje.
-* parametro l Tama–o en bytes del mensaje almacenado en la imagen.
+* parametro msg Apuntador a una cadena de caracteres donde se depositarï¿½ el mensaje.
+* parametro l Tamaï¿½o en bytes del mensaje almacenado en la imagen.
 * parametro n Cantidad de bits del mensaje que se almacenan en cada componente de color de cada pixel. 0 < n <= 8.
 */
 void leerMensaje( Imagen * img, unsigned char msg[], int l, int n ) {
@@ -123,11 +141,11 @@ void leerMensaje( Imagen * img, unsigned char msg[], int l, int n ) {
 }
 
 /**
-* Extrae n bits a partir del bit que se encuentra en la posici—n bitpos en la secuencia de bytes que
-* se pasan como parámetro
+* Extrae n bits a partir del bit que se encuentra en la posiciï¿½n bitpos en la secuencia de bytes que
+* se pasan como parï¿½metro
 * parametro secuencia Apuntador a una secuencia de bytes.
 * parametro n Cantidad de bits que se desea extraer. 0 < n <= 8.
-* parametro bitpos Posición del bit desde donde se extraerán los bits. 0 <= n < 8*longitud de la secuencia
+* parametro bitpos Posiciï¿½n del bit desde donde se extraerï¿½n los bits. 0 <= n < 8*longitud de la secuencia
 * retorno Los n bits solicitados almacenados en los bits menos significativos de un unsigned char
 */
 unsigned char sacarNbits( unsigned char secuencia[], int bitpos, int n ) {
@@ -137,7 +155,7 @@ unsigned char sacarNbits( unsigned char secuencia[], int bitpos, int n ) {
 // Lee un archivo en formato BMP y lo almacena en la estructura img
 // NO MODIFICAR
 void cargarBMP24 (Imagen * imagen, char * nomArchivoEntrada) {
-	// bmpDataOffset almacena la posición inicial de los datos de la imagen. Las otras almacenan el alto y el ancho
+	// bmpDataOffset almacena la posiciï¿½n inicial de los datos de la imagen. Las otras almacenan el alto y el ancho
 	// en pixeles respectivamente
 	int bmpDataOffset, bmpHeight, bmpWidth;
 	int y;
@@ -151,14 +169,14 @@ void cargarBMP24 (Imagen * imagen, char * nomArchivoEntrada) {
 		exit (-1);
 	}
 	
-	fseek (bitmapFile, 10, SEEK_SET); // 10 es la posición del campo "Bitmap Data Offset" del bmp	
+	fseek (bitmapFile, 10, SEEK_SET); // 10 es la posiciï¿½n del campo "Bitmap Data Offset" del bmp	
 	fread (&bmpDataOffset, sizeof (int), 1, bitmapFile);
 	
-	fseek (bitmapFile, 18, SEEK_SET); // 18 es la posición del campo "height" del bmp
+	fseek (bitmapFile, 18, SEEK_SET); // 18 es la posiciï¿½n del campo "height" del bmp
 	fread (&bmpWidth, sizeof (int), 1, bitmapFile);
 	bmpWidth = bmpWidth*3;
 		
-	fseek (bitmapFile, 22, SEEK_SET); // 22 es la posición del campo "width" del bmp
+	fseek (bitmapFile, 22, SEEK_SET); // 22 es la posiciï¿½n del campo "width" del bmp
 	fread (&bmpHeight, sizeof (int), 1, bitmapFile);
 	
 	residuo = (4 - (bmpWidth) % 4)&3; // Se debe calcular los bits residuales del bmp, que surjen al almacenar en palabras de 32 bits
