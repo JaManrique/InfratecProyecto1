@@ -4,7 +4,7 @@
 // DESARROLLADO POR:
 // Nombre, carnet
 // Nombre, carnet
-// Nombre, carnet
+// Julián Alberto Manrique Puerto, 201615449
 
 #define _CRT_SECURE_NO_DEPRECATE 
 #include "stdlib.h" 
@@ -122,12 +122,13 @@ void insertarMensaje( Imagen * img , unsigned char mensaje[], int n ) {
         // Los primeros son los bits que van desde el 0 hasta el 8-n [puede hacer un dibujo para ver que está pasando], es decir me importa salvar los primeros (8-n) bits
         unsigned char parteQueMeSirve = img[0].informacion[i] & mascaraSalvarPrimeros(8-n);
 
-        //Función auxiliar que devuelve un byte tal que:
+        int deboLeer = bitsPorLeer % (n+1); // debo coger al menos  esta cantidad de bits en la siguiente 'iteración' (lo que me falta % (n+1) [para que coja por mucho n Bits]
+        //Guardo el byte después de aplicar la esteganografía
+
+        //Utilizo una función auxiliar que devuelve un byte tal que:
         //Inserta a los últimos n bits que entran como parámetro en el byte actual (la parte que me sirve)
         //En otras palabras; a la parte que me sirve (que contiene los dígitos mas significativo del color), la agrego los siguientes n bits del mensaje
         //Esta función modifica el mensaje (mas información en la función)
-        int deboLeer = bitsPorLeer % (n+1); // debo coger al menos  esta cantidad de bits en la siguiente 'iteración' (lo que me falta % (n+1) [para que coja por mucho n Bits]
-        //Guardo el byte después de aplicar la esteganografía
         unsigned char byteRGBModificado = esteganografiar(parteQueMeSirve, mensaje, deboLeer); //Le voy a pasar como parámetro el byte que me sirve, el mensaje y cuantos bits debo leer)
         //Lo reemplazo en la información de la imagen
         img[0].informacion[i] = byteRGBModificado;
@@ -160,10 +161,11 @@ int lenStr(unsigned char mensaje[])
 * Función de apoyo que dado una parte de un byte a conservar, un mensaje y una cantidad específica de bits, inserta los siguietntes n bits del mensaje
 * en las últimas n posiciones del Byte de entrada. Para poder realizar esto sin tener que ir contabilizando en qué parte voy del mensaje, vamos a correr el mensaje
 * n bits a la izquierda (puesto que como ya los guardé en la imágen, no importa si los pierdo)
+* (Mientras desarrollabamos no tuvimos en cuenta el tercer TODO, por tanto esta función puede ser un remplazo de "sacarNbits")
 * ---
 * Parámetro parteAConservar byte partido de tal forma que los primeros (8-n) bits contienen información sobre el color de la imágen (y que por tanto NO se deben modificar) Los últimos n bits están en 0 para poder agregarles (sin tanta maña) los siguientes n bits del mensaje
 * Parámetro mensaje mensaje que falta por esteganografiar. Se va a modificar corriendolo n BITS a la izquierda cada vez (la función correr mensaje se encarga de esto) 
-* Parámetro n cantidad de bits del mensaje a ocultar en el byte 0< n <= 8
+* Parámetro n cantidad de bits del mensaje a ocultar en el byte 0 < n <= 8
 */
 unsigned char esteganografiar(unsigned char parteAConservar, unsigned char mensaje[], int n)
 {
@@ -171,36 +173,54 @@ unsigned char esteganografiar(unsigned char parteAConservar, unsigned char mensa
     unsigned char byteAInsertar = mensaje[1] & mascaraSalvarPrimeros(n);
     //Para poder 'meterlos' al final del byte que me llegó, debo correrlos hasta el final
     byteAInsertar >> 8-n;
+    //Los sumo con un 'or' bit a bit
     byteAInsertar = parteAConservar | byteAInsertar;
     return byteAInsertar;
 }
 
+/**
+* Función auxiliar que devuelve un byte máscara para salvar los primeros n bits cuando se haga un & entre cualquier byte y la máscara
+* Recibe los n bits a salvar 0 < n <= 8
+*/
 unsigned char mascaraSalvarPrimeros(int n)
 {
 	//Quiero hacer una mascara tal que
-	//si n = 3 deba hacer lo siguiente:
+	//si n = 5 deba hacer lo siguiente:
 	// entrada = xxxxxxxx
 	//     &
 	// mascara = 11111000
    //resultado = xxxxx000
 	// 
-	//Miremos que la mascara (en representacion decimal) es = 2^7 + 2^6 + ... + 2^3 + 0 + 0 + 0 == Suma desde i = 7 hasta i = 3 de (2^i)
-	//A partir de esto, miramos para el caso general: quiero 'matar' los últimos k bits, pero me dan los n que quiero 'salvar', es claro que k + n = 8, entonces k = n-8
-	//Debo operar mi entrada con una máscara m, donde su representación decimal es: Suma desde i = 7 hasta i = k de (2^i)
+	//Miremos que la mascara se puede obtener a partir de sumar 1 y realizar corrimientos de la siguiente manera:
+    //quiero salvar los primeros n entonces, partiendo de un byte nulo (00000000) debo sumarle 1 y hacer un corrimiento a la izquierda. Esto debo realizarlo n veces, pues quiero tener n 1's en la máscara
+    //luego, me faltaría mover los 1's k veces a la izquierda para completar el byte, donde k = (8-n-1) 
+    //[es 8-n-1, puesto que si hago el corrimiento n veces, voy a correr los unos n+1 casillas, dado que en la última iteración (particularmente en el corrimiento) ya inserto un cero {me faltaría: 8-(n+1)}] 
+    //Para verificar, k + (n+1) = 8, miramos: 8-n-1 + n +1 = 8 - 1 + 1 = 8 (sumo por n+1, pues es el bit extra que corrí en la última iteración)
+    //Entonces debo hacer k corrimientos a la izquierda para completar los demas ceros y completar mi máscara
 
-	unsigned char mascara;
-	// k = n-8
-	int bitsMatados = n-8;
-
-	//desde k hasta 7
-	for (int i = bitsMatados; i < 8; i++) 
-	{
-		mascara += pow(2, i);
-	}
-	//breakpoint
-	return mascara;
+	unsigned char mascara = 0;
 	
+    //Hago n veces
+    for (int i = 0; i < n; i++)
+    {
+        //Sumarle 1 y correrlo a la izquierda
+        mascara++;
+        mascara << 1;
+    }
 
+    //Declaro k = 8-n-1
+    int k = 8-n-1;
+    //Lo muevo a la izquierda K veces para completar
+    if (k > 0)
+    {
+        mascara << k;
+    }
+    else //k = 0 solo si n = 8, y como ya hice los corrimientos, me faltaría sumar uno al final
+    {
+        mascara++;
+    }
+    //Mi máscara estaría completa para hacer un & con otro byte y salvar los primeros n bits
+	return mascara;
 }
 
 /**
